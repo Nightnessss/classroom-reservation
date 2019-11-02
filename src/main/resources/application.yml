@@ -1,0 +1,21 @@
+server:
+  port: 8900
+
+
+spring:
+#  datasource:
+#    driver-class-name: com.mysql.cj.jdbc.Driver
+#    url:
+#    username:
+#    password:
+#    name: classroom
+#    type: com.alibaba.druid.pool.DruidDataSource
+  profiles:
+    active: enc
+
+feead:
+  timeTableProperties:
+    # 时间类型（2.冬令时、1.夏令时）
+    timetable: 2
+
+
