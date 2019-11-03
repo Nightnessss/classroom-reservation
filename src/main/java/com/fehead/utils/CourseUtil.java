@@ -66,7 +66,7 @@ public class CourseUtil {
     public List<String> GETMETHODS = Arrays.asList(GETS);
     /**
      * 将提取出来的周次信息存入数据库
-     * @return
+     * @return List<FreeClassSimplifyDO> 初步简化后的教室课程信息 如[1-9, 11-18]
      */
     public List<FreeClassSimplifyDO> freeClassSimplify() {
 
@@ -135,7 +135,7 @@ public class CourseUtil {
 
     /**
      * 从课程的文字信息中提取课程周次
-     * @param s
+     * @param s 从教务管理系统获取的详细课程信息
      * @return
      */
     private List<String> extractMessageByRegular(String s) {
@@ -194,12 +194,12 @@ public class CourseUtil {
 
     /**
      * 将 3-5或19 这类形式转化为 001110000000000000000或 00000000000000000010形式
-     * @param str
+     * @param str 字符串 如[1-8, 11-18]
      * @return
      */
     private String convertString2ByteString(String str) {
         str = str.substring(1, str.length() - 1);
-        List<String> list = Arrays.asList(str.split(", "));
+        String[] list = str.split(", ");
 
 //        list.forEach(System.out::println);
 
@@ -230,10 +230,10 @@ public class CourseUtil {
 
     /**
      * 反射
-     * @param classroomInfoDO
-     * @param methods
-     * @param targets
-     * @return
+     * @param classroomInfoDO 对象
+     * @param methods set方法集合
+     * @param targets 参数集合
+     * @return ClassroomInfoDO 对象
      * @throws Exception
      */
     public ClassroomInfoDO setCourse(ClassroomInfoDO classroomInfoDO, List<String> methods, List<String> targets) throws Exception {
@@ -253,9 +253,9 @@ public class CourseUtil {
 
     /**
      * 反射
-     * @param classroomInfoDO
-     * @param methods
-     * @return
+     * @param classroomInfoDO 对象
+     * @param methods get方法集合
+     * @return List<String> 该对象所有课的二进制字符串集合
      * @throws Exception
      */
     public List<String> getCourse(ClassroomInfoDO classroomInfoDO, List<String> methods) throws Exception {

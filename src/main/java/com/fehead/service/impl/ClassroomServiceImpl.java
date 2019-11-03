@@ -114,109 +114,30 @@ public class ClassroomServiceImpl implements ClassroomService {
     @Autowired
     private ClassroomInfoMapper classroomInfoMapper;
 
-//    /**
-//     * 获得空教室
-//     * @param startTime
-//     * @param endTime
-//     * @return
-//     * @throws ParseException
-//     * @throws BusinessException
-//     */
-//    @Override
-//    public ClassroomDisplayVO getFreeClassroom(Date startTime, Date endTime, Pageable pageable) throws ParseException, BusinessException {
-//
-//        if (pageable==null)  return null;
-//
-//        // 星期几
-//        SimpleDateFormat week = new SimpleDateFormat("EEEE");
-//        String startWeek = week.format(startTime);
-//        String endWeek = week.format(endTime);
-//        if (!startWeek.equals(endWeek)) {
-//            logger.info("EXCEPTION: " + EmBusinessError.PARAMETER_VALIDATION_ERROR.getErrorCode() + " "
-//                    + EmBusinessError.PARAMETER_VALIDATION_ERROR.getErrorMsg());
-//            throw new BusinessException(EmBusinessError.PARAMETER_VALIDATION_ERROR);
-//        }
-//        logger.info("WEEK: " + startWeek);
-//
-//        List<Integer> targetClasses = timeAndClassUtil.timeToClasses(startTime, endTime, totalProperties.getTimetableProperties().getTimetable());
-//        logger.info("FREE CLASSES: " + Arrays.asList(targetClasses).toString());
-//        List<FreeClassroomModel> targetClassrooms = new ArrayList<>();
-//
-//        QueryWrapper<ClassroomDO> wrapper = new QueryWrapper<>();
-//
-//        wrapper.orderByAsc("id");
-//
-//        Page<ClassroomDO> page = new Page<>(pageable.getPageNumber(), pageable.getPageSize());
-//
-//        IPage<ClassroomDO> classroomDOIPage;
-//
-//        classroomDOIPage = classroomMapper.selectPage(page, wrapper);
-//
-//        logger.info("PAGE_TOTAL: " + page.getTotal());
-//        logger.info("PAGE_SIZE: " + page.getSize());
-//        logger.info("PAGE_CURRENT: " + page.getCurrent());
-//
-//        for (ClassroomDO classroomDO : classroomDOIPage.getRecords()) {
-////            System.out.println("-------------------------------------------");
-////            System.out.println("classroomDO: " + classroomDO.getId());
-//
-//            boolean flag = true;
-//            // 当该教室该节次时间段有课时，标记flag=false
-//            for (Integer i : targetClasses) {
-//                if (!ifNull(i, classroomDO, startWeek)) {
-//                    flag = false;
-//                }
-//            }
-//            if (flag) {
-//                FreeClassroomModel freeClassroomModel = new FreeClassroomModel();
-//                freeClassroomModel.setStartTime(startTime);
-//                freeClassroomModel.setEndTime(endTime);
-////                freeClassroomModel.setSeats(classroomDO.getSeats());
-////                freeClassroomModel.setBuilding(classroomDO.getBuilding());
-////                freeClassroomModel.setRoom(classroomDO.getRoom());
-////                freeClassroomModel.setId(classroomDO.getId());
-////                freeClassroomModel.setCode(classroomDO.getCode());
-//                BeanUtils.copyProperties(classroomDO, freeClassroomModel);
-//                targetClassrooms.add(freeClassroomModel);
-////                System.out.println("free: " + classroomDO.getId());
-//
-//            }
-//        }
-//
-//        List<ClassroomListOrderVO> classroomListOrderVOS = new ArrayList<>();
-//        int listId = (int) ((page.getCurrent() - 1) * page.getSize());
-//        for (FreeClassroomModel t:targetClassrooms) {
-//
-//            ClassroomListVO classroomListVO = freeClassroomModelToClassroomListVO(t);
-////            System.out.println(t.getId());
-//            ClassroomListOrderVO classroomListOrderVO = new ClassroomListOrderVO(classroomListVO, ++listId);
-//            classroomListOrderVOS.add(classroomListOrderVO);
-//        }
-//        ClassroomDisplayVO classroomDisplayVO = new ClassroomDisplayVO();
-//        classroomDisplayVO.setClassroomListOrderVOS(classroomListOrderVOS);
-//        classroomDisplayVO.setTotal(page.getTotal());
-//        classroomDisplayVO.setCurrent(page.getCurrent());
-//
-//        return classroomDisplayVO;
-//    }
+
     /**
      * 获得空教室
-     * @param startTime
-     * @param endTime
-     * @return
-     * @throws ParseException
-     * @throws BusinessException
+     * @param startTime 开始时间
+     * @param endTime 结束时间
+     * @param pageable 分页信息
+     * @return ClassroomDisplayVO
+     * @throws Exception
      */
     @Override
     public ClassroomDisplayVO getFreeClassroom(Date startTime, Date endTime, Pageable pageable) throws Exception {
 
+        // 判断分页不为空
         if (pageable==null)  return null;
 
         // 星期几
         SimpleDateFormat week = new SimpleDateFormat("EEEE");
         String startWeek = week.format(startTime);
         String endWeek = week.format(endTime);
+
+        // 周次
         int weekly = date2Weekly(startTime);
+
+        // 开始时间小于结束时间
         if (!startWeek.equals(endWeek)) {
             logger.info("EXCEPTION: " + EmBusinessError.PARAMETER_VALIDATION_ERROR.getErrorCode() + " "
                     + EmBusinessError.PARAMETER_VALIDATION_ERROR.getErrorMsg());
@@ -226,25 +147,25 @@ public class ClassroomServiceImpl implements ClassroomService {
 
         // 获取该时间段是哪几节课
         List<Integer> targetClasses = timeAndClassUtil.timeToClasses(startTime, endTime, totalProperties.getTimetableProperties().getTimetable());
-        logger.info("FREE CLASSES: " + Arrays.asList(targetClasses).toString());
+        logger.info("FREE CLASSES: " + Collections.singletonList(targetClasses).toString());
 
+        // 根据id升序查找校本部的课表
         QueryWrapper<ClassroomInfoDO> wrapper = new QueryWrapper<>();
-
         wrapper.orderByAsc("id");
         wrapper.eq("college", "校本部");
-
         Page<ClassroomInfoDO> page = new Page<>(pageable.getPageNumber(), pageable.getPageSize());
-
         IPage<ClassroomInfoDO> classroomInfoDOIPage;
-
         classroomInfoDOIPage = classroomInfoMapper.selectPage(page, wrapper);
-//        String osName = env.getProperty("os.name");
-//        logger.info("OS NAME: " + osName);
-
         logger.info("PAGE_TOTAL: " + page.getTotal());
         logger.info("PAGE_SIZE: " + page.getSize());
         logger.info("PAGE_CURRENT: " + page.getCurrent());
+
+
+//        String osName = env.getProperty("os.name");
+//        logger.info("OS NAME: " + osName);
         List<ClassroomListOrderVO> classroomListOrderVOS = new ArrayList<>();
+
+        // 自定义列表id，用于前端展示
         int listId = (int) ((page.getCurrent() - 1) * page.getSize());
         for (ClassroomInfoDO classroomInfoDO : classroomInfoDOIPage.getRecords()) {
 //            System.out.println("-------------------------------------------");
@@ -281,20 +202,16 @@ public class ClassroomServiceImpl implements ClassroomService {
         return classroomDisplayVO;
     }
 
+
     /**
-     * FreeClassroomModel 转换成 ClassroomListVO
-     * @param freeClassroomModel
-     * @return
+     * 判断是否有课
+     * @param num 第几节课
+     * @param classroomInfoDO 教室对象
+     * @param week 星期几
+     * @param weekly 第几周
+     * @return boolean
+     * @throws Exception
      */
-    public ClassroomListVO freeClassroomModelToClassroomListVO(FreeClassroomModel freeClassroomModel) {
-
-        ClassroomListVO classroomListVO = new ClassroomListVO();
-        BeanUtils.copyProperties(freeClassroomModel, classroomListVO);
-
-        return classroomListVO;
-    }
-
-
     private boolean hasCourse(Integer num, ClassroomInfoDO classroomInfoDO, String week, int weekly) throws Exception {
 
         List<String> list = courseUtil.getCourse(classroomInfoDO, courseUtil.GETMETHODS);
@@ -324,268 +241,268 @@ public class ClassroomServiceImpl implements ClassroomService {
         return total/7 + 1;
     }
 
-    /**
-     * 判断给定条件下的教室是否为空
-     * @param num  课的节次
-     * @param classroomDO  教室对象
-     * @param week  周次
-     * @param osName  操作系统
-     * @return
-     */
-    private boolean ifNull(Integer num, ClassroomDO classroomDO, String week, String osName) {
-//        logger.info("TEST: num " + num);
-//        logger.info("TEST: week " + week);
-//        System.out.println(env.getDefaultProfiles());
-//        final String osName = env.getProperty("os.name");
-//
-//        if (StringUtils.indexOfIgnoreCase(osName, "windows") != 0) {
-//
+//    /**
+//     * 判断给定条件下的教室是否为空
+//     * @param num  课的节次
+//     * @param classroomDO  教室对象
+//     * @param week  周次
+//     * @param osName  操作系统
+//     * @return
+//     */
+//    private boolean ifNull(Integer num, ClassroomDO classroomDO, String week, String osName) {
+////        logger.info("TEST: num " + num);
+////        logger.info("TEST: week " + week);
+////        System.out.println(env.getDefaultProfiles());
+////        final String osName = env.getProperty("os.name");
+////
+////        if (StringUtils.indexOfIgnoreCase(osName, "windows") != 0) {
+////
+////        }
+//        if (StringUtils.indexOfIgnoreCase(osName, "Windows") != -1) {
+//            switch (week) {
+//                case "星期一":
+//                    switch (num) {
+//                        case 1:
+////                            logger.info("CLASSES1: " + classroomDO.getMon1());
+////                            logger.info("STATUS: " + classroomDO.getMon1().isEmpty());
+//                            return classroomDO.getMon1().isEmpty();
+//                        case 2:
+////                            logger.info("CLASSES2: " + classroomDO.getMon2());
+////                            logger.info("STATUS: " + classroomDO.getMon2().isEmpty());
+//                            return classroomDO.getMon2().isEmpty();
+//                        case 3:
+////                            logger.info("CLASSES3: " + classroomDO.getMon3());
+////                            logger.info("STATUS: " + classroomDO.getMon3().isEmpty());
+//                            return classroomDO.getMon3().isEmpty();
+//                        case 4:
+////                            logger.info("CLASSES4: " + classroomDO.getMon4());
+////                            logger.info("STATUS: " + classroomDO.getMon4().isEmpty());
+//                            return classroomDO.getMon4().isEmpty();
+//                        case 5:
+////                            logger.info("CLASSES5: " + classroomDO.getMon5());
+////                            logger.info("STATUS: " + classroomDO.getMon5().isEmpty());
+//                            return classroomDO.getMon5().isEmpty();
+//                        case 6:
+////                            logger.info("CLASSES6: " + classroomDO.getMon6());
+////                            logger.info("STATUS: " + classroomDO.getMon6().isEmpty());
+//                            return classroomDO.getMon6().isEmpty();
+//                    }
+//                case "星期二":
+//                    switch (num) {
+//                        case 1:
+//                            return classroomDO.getTue1().isEmpty();
+//                        case 2:
+//                            return classroomDO.getTue2().isEmpty();
+//                        case 3:
+//                            return classroomDO.getTue3().isEmpty();
+//                        case 4:
+//                            return classroomDO.getTue4().isEmpty();
+//                        case 5:
+//                            return classroomDO.getTue5().isEmpty();
+//                        case 6:
+//                            return classroomDO.getTue6().isEmpty();
+//                    }
+//                case "星期三":
+//                    switch (num) {
+//                        case 1:
+//                            return classroomDO.getWed1().isEmpty();
+//                        case 2:
+//                            return classroomDO.getWed2().isEmpty();
+//                        case 3:
+//                            return classroomDO.getWed3().isEmpty();
+//                        case 4:
+//                            return classroomDO.getWed4().isEmpty();
+//                        case 5:
+//                            return classroomDO.getWed5().isEmpty();
+//                        case 6:
+//                            return classroomDO.getWed6().isEmpty();
+//                    }
+//                case "星期四":
+//                    switch (num) {
+//                        case 1:
+//                            return classroomDO.getThur1().isEmpty();
+//                        case 2:
+//                            return classroomDO.getThur2().isEmpty();
+//                        case 3:
+//                            return classroomDO.getThur3().isEmpty();
+//                        case 4:
+//                            return classroomDO.getThur4().isEmpty();
+//                        case 5:
+//                            return classroomDO.getThur5().isEmpty();
+//                        case 6:
+//                            return classroomDO.getThur6().isEmpty();
+//                    }
+//                case "星期五":
+//                    switch (num) {
+//                        case 1:
+//                            return classroomDO.getFri1().isEmpty();
+//                        case 2:
+//                            return classroomDO.getFri2().isEmpty();
+//                        case 3:
+//                            return classroomDO.getFri3().isEmpty();
+//                        case 4:
+//                            return classroomDO.getFri4().isEmpty();
+//                        case 5:
+//                            return classroomDO.getFri5().isEmpty();
+//                        case 6:
+//                            return classroomDO.getFri6().isEmpty();
+//                    }
+//                case "星期六":
+//                    switch (num) {
+//                        case 1:
+//                            return classroomDO.getSat1().isEmpty();
+//                        case 2:
+//                            return classroomDO.getSat2().isEmpty();
+//                        case 3:
+//                            return classroomDO.getSat3().isEmpty();
+//                        case 4:
+//                            return classroomDO.getSat4().isEmpty();
+//                        case 5:
+//                            return classroomDO.getSat5().isEmpty();
+//                        case 6:
+//                            return classroomDO.getSat6().isEmpty();
+//                    }
+//                case "星期日":
+//                    switch (num) {
+//                        case 1:
+//                            return classroomDO.getSun1().isEmpty();
+//                        case 2:
+//                            return classroomDO.getSun2().isEmpty();
+//                        case 3:
+//                            return classroomDO.getSun3().isEmpty();
+//                        case 4:
+//                            return classroomDO.getSun4().isEmpty();
+//                        case 5:
+//                            return classroomDO.getSun5().isEmpty();
+//                        case 6:
+//                            return classroomDO.getSun6().isEmpty();
+//                    }
+//                    break;
+//            }
+//        } else {
+//            switch (week) {
+//                case "Monday":
+//                    switch (num) {
+//                        case 1:
+////                            logger.info("CLASSES1: " + classroomDO.getMon1());
+////                            logger.info("STATUS: " + classroomDO.getMon1().isEmpty());
+//                            return classroomDO.getMon1().isEmpty();
+//                        case 2:
+////                            logger.info("CLASSES2: " + classroomDO.getMon2());
+////                            logger.info("STATUS: " + classroomDO.getMon2().isEmpty());
+//                            return classroomDO.getMon2().isEmpty();
+//                        case 3:
+////                            logger.info("CLASSES3: " + classroomDO.getMon3());
+////                            logger.info("STATUS: " + classroomDO.getMon3().isEmpty());
+//                            return classroomDO.getMon3().isEmpty();
+//                        case 4:
+////                            logger.info("CLASSES4: " + classroomDO.getMon4());
+////                            logger.info("STATUS: " + classroomDO.getMon4().isEmpty());
+//                            return classroomDO.getMon4().isEmpty();
+//                        case 5:
+////                            logger.info("CLASSES5: " + classroomDO.getMon5());
+////                            logger.info("STATUS: " + classroomDO.getMon5().isEmpty());
+//                            return classroomDO.getMon5().isEmpty();
+//                        case 6:
+////                            logger.info("CLASSES6: " + classroomDO.getMon6());
+////                            logger.info("STATUS: " + classroomDO.getMon6().isEmpty());
+//                            return classroomDO.getMon6().isEmpty();
+//                    }
+//                case "Tuesday":
+//                    switch (num) {
+//                        case 1:
+//                            return classroomDO.getTue1().isEmpty();
+//                        case 2:
+//                            return classroomDO.getTue2().isEmpty();
+//                        case 3:
+//                            return classroomDO.getTue3().isEmpty();
+//                        case 4:
+//                            return classroomDO.getTue4().isEmpty();
+//                        case 5:
+//                            return classroomDO.getTue5().isEmpty();
+//                        case 6:
+//                            return classroomDO.getTue6().isEmpty();
+//                    }
+//                case "Wednesday":
+//                    switch (num) {
+//                        case 1:
+//                            return classroomDO.getWed1().isEmpty();
+//                        case 2:
+//                            return classroomDO.getWed2().isEmpty();
+//                        case 3:
+//                            return classroomDO.getWed3().isEmpty();
+//                        case 4:
+//                            return classroomDO.getWed4().isEmpty();
+//                        case 5:
+//                            return classroomDO.getWed5().isEmpty();
+//                        case 6:
+//                            return classroomDO.getWed6().isEmpty();
+//                    }
+//                case "Thursday":
+//                    switch (num) {
+//                        case 1:
+//                            return classroomDO.getThur1().isEmpty();
+//                        case 2:
+//                            return classroomDO.getThur2().isEmpty();
+//                        case 3:
+//                            return classroomDO.getThur3().isEmpty();
+//                        case 4:
+//                            return classroomDO.getThur4().isEmpty();
+//                        case 5:
+//                            return classroomDO.getThur5().isEmpty();
+//                        case 6:
+//                            return classroomDO.getThur6().isEmpty();
+//                    }
+//                case "Friday":
+//                    switch (num) {
+//                        case 1:
+//                            return classroomDO.getFri1().isEmpty();
+//                        case 2:
+//                            return classroomDO.getFri2().isEmpty();
+//                        case 3:
+//                            return classroomDO.getFri3().isEmpty();
+//                        case 4:
+//                            return classroomDO.getFri4().isEmpty();
+//                        case 5:
+//                            return classroomDO.getFri5().isEmpty();
+//                        case 6:
+//                            return classroomDO.getFri6().isEmpty();
+//                    }
+//                case "Saturday":
+//                    switch (num) {
+//                        case 1:
+//                            return classroomDO.getSat1().isEmpty();
+//                        case 2:
+//                            return classroomDO.getSat2().isEmpty();
+//                        case 3:
+//                            return classroomDO.getSat3().isEmpty();
+//                        case 4:
+//                            return classroomDO.getSat4().isEmpty();
+//                        case 5:
+//                            return classroomDO.getSat5().isEmpty();
+//                        case 6:
+//                            return classroomDO.getSat6().isEmpty();
+//                    }
+//                case "Sunday":
+//                    switch (num) {
+//                        case 1:
+//                            return classroomDO.getSun1().isEmpty();
+//                        case 2:
+//                            return classroomDO.getSun2().isEmpty();
+//                        case 3:
+//                            return classroomDO.getSun3().isEmpty();
+//                        case 4:
+//                            return classroomDO.getSun4().isEmpty();
+//                        case 5:
+//                            return classroomDO.getSun5().isEmpty();
+//                        case 6:
+//                            return classroomDO.getSun6().isEmpty();
+//                    }
+//                    break;
+//            }
 //        }
-        if (StringUtils.indexOfIgnoreCase(osName, "Windows") != -1) {
-            switch (week) {
-                case "星期一":
-                    switch (num) {
-                        case 1:
-//                            logger.info("CLASSES1: " + classroomDO.getMon1());
-//                            logger.info("STATUS: " + classroomDO.getMon1().isEmpty());
-                            return classroomDO.getMon1().isEmpty();
-                        case 2:
-//                            logger.info("CLASSES2: " + classroomDO.getMon2());
-//                            logger.info("STATUS: " + classroomDO.getMon2().isEmpty());
-                            return classroomDO.getMon2().isEmpty();
-                        case 3:
-//                            logger.info("CLASSES3: " + classroomDO.getMon3());
-//                            logger.info("STATUS: " + classroomDO.getMon3().isEmpty());
-                            return classroomDO.getMon3().isEmpty();
-                        case 4:
-//                            logger.info("CLASSES4: " + classroomDO.getMon4());
-//                            logger.info("STATUS: " + classroomDO.getMon4().isEmpty());
-                            return classroomDO.getMon4().isEmpty();
-                        case 5:
-//                            logger.info("CLASSES5: " + classroomDO.getMon5());
-//                            logger.info("STATUS: " + classroomDO.getMon5().isEmpty());
-                            return classroomDO.getMon5().isEmpty();
-                        case 6:
-//                            logger.info("CLASSES6: " + classroomDO.getMon6());
-//                            logger.info("STATUS: " + classroomDO.getMon6().isEmpty());
-                            return classroomDO.getMon6().isEmpty();
-                    }
-                case "星期二":
-                    switch (num) {
-                        case 1:
-                            return classroomDO.getTue1().isEmpty();
-                        case 2:
-                            return classroomDO.getTue2().isEmpty();
-                        case 3:
-                            return classroomDO.getTue3().isEmpty();
-                        case 4:
-                            return classroomDO.getTue4().isEmpty();
-                        case 5:
-                            return classroomDO.getTue5().isEmpty();
-                        case 6:
-                            return classroomDO.getTue6().isEmpty();
-                    }
-                case "星期三":
-                    switch (num) {
-                        case 1:
-                            return classroomDO.getWed1().isEmpty();
-                        case 2:
-                            return classroomDO.getWed2().isEmpty();
-                        case 3:
-                            return classroomDO.getWed3().isEmpty();
-                        case 4:
-                            return classroomDO.getWed4().isEmpty();
-                        case 5:
-                            return classroomDO.getWed5().isEmpty();
-                        case 6:
-                            return classroomDO.getWed6().isEmpty();
-                    }
-                case "星期四":
-                    switch (num) {
-                        case 1:
-                            return classroomDO.getThur1().isEmpty();
-                        case 2:
-                            return classroomDO.getThur2().isEmpty();
-                        case 3:
-                            return classroomDO.getThur3().isEmpty();
-                        case 4:
-                            return classroomDO.getThur4().isEmpty();
-                        case 5:
-                            return classroomDO.getThur5().isEmpty();
-                        case 6:
-                            return classroomDO.getThur6().isEmpty();
-                    }
-                case "星期五":
-                    switch (num) {
-                        case 1:
-                            return classroomDO.getFri1().isEmpty();
-                        case 2:
-                            return classroomDO.getFri2().isEmpty();
-                        case 3:
-                            return classroomDO.getFri3().isEmpty();
-                        case 4:
-                            return classroomDO.getFri4().isEmpty();
-                        case 5:
-                            return classroomDO.getFri5().isEmpty();
-                        case 6:
-                            return classroomDO.getFri6().isEmpty();
-                    }
-                case "星期六":
-                    switch (num) {
-                        case 1:
-                            return classroomDO.getSat1().isEmpty();
-                        case 2:
-                            return classroomDO.getSat2().isEmpty();
-                        case 3:
-                            return classroomDO.getSat3().isEmpty();
-                        case 4:
-                            return classroomDO.getSat4().isEmpty();
-                        case 5:
-                            return classroomDO.getSat5().isEmpty();
-                        case 6:
-                            return classroomDO.getSat6().isEmpty();
-                    }
-                case "星期日":
-                    switch (num) {
-                        case 1:
-                            return classroomDO.getSun1().isEmpty();
-                        case 2:
-                            return classroomDO.getSun2().isEmpty();
-                        case 3:
-                            return classroomDO.getSun3().isEmpty();
-                        case 4:
-                            return classroomDO.getSun4().isEmpty();
-                        case 5:
-                            return classroomDO.getSun5().isEmpty();
-                        case 6:
-                            return classroomDO.getSun6().isEmpty();
-                    }
-                    break;
-            }
-        } else {
-            switch (week) {
-                case "Monday":
-                    switch (num) {
-                        case 1:
-//                            logger.info("CLASSES1: " + classroomDO.getMon1());
-//                            logger.info("STATUS: " + classroomDO.getMon1().isEmpty());
-                            return classroomDO.getMon1().isEmpty();
-                        case 2:
-//                            logger.info("CLASSES2: " + classroomDO.getMon2());
-//                            logger.info("STATUS: " + classroomDO.getMon2().isEmpty());
-                            return classroomDO.getMon2().isEmpty();
-                        case 3:
-//                            logger.info("CLASSES3: " + classroomDO.getMon3());
-//                            logger.info("STATUS: " + classroomDO.getMon3().isEmpty());
-                            return classroomDO.getMon3().isEmpty();
-                        case 4:
-//                            logger.info("CLASSES4: " + classroomDO.getMon4());
-//                            logger.info("STATUS: " + classroomDO.getMon4().isEmpty());
-                            return classroomDO.getMon4().isEmpty();
-                        case 5:
-//                            logger.info("CLASSES5: " + classroomDO.getMon5());
-//                            logger.info("STATUS: " + classroomDO.getMon5().isEmpty());
-                            return classroomDO.getMon5().isEmpty();
-                        case 6:
-//                            logger.info("CLASSES6: " + classroomDO.getMon6());
-//                            logger.info("STATUS: " + classroomDO.getMon6().isEmpty());
-                            return classroomDO.getMon6().isEmpty();
-                    }
-                case "Tuesday":
-                    switch (num) {
-                        case 1:
-                            return classroomDO.getTue1().isEmpty();
-                        case 2:
-                            return classroomDO.getTue2().isEmpty();
-                        case 3:
-                            return classroomDO.getTue3().isEmpty();
-                        case 4:
-                            return classroomDO.getTue4().isEmpty();
-                        case 5:
-                            return classroomDO.getTue5().isEmpty();
-                        case 6:
-                            return classroomDO.getTue6().isEmpty();
-                    }
-                case "Wednesday":
-                    switch (num) {
-                        case 1:
-                            return classroomDO.getWed1().isEmpty();
-                        case 2:
-                            return classroomDO.getWed2().isEmpty();
-                        case 3:
-                            return classroomDO.getWed3().isEmpty();
-                        case 4:
-                            return classroomDO.getWed4().isEmpty();
-                        case 5:
-                            return classroomDO.getWed5().isEmpty();
-                        case 6:
-                            return classroomDO.getWed6().isEmpty();
-                    }
-                case "Thursday":
-                    switch (num) {
-                        case 1:
-                            return classroomDO.getThur1().isEmpty();
-                        case 2:
-                            return classroomDO.getThur2().isEmpty();
-                        case 3:
-                            return classroomDO.getThur3().isEmpty();
-                        case 4:
-                            return classroomDO.getThur4().isEmpty();
-                        case 5:
-                            return classroomDO.getThur5().isEmpty();
-                        case 6:
-                            return classroomDO.getThur6().isEmpty();
-                    }
-                case "Friday":
-                    switch (num) {
-                        case 1:
-                            return classroomDO.getFri1().isEmpty();
-                        case 2:
-                            return classroomDO.getFri2().isEmpty();
-                        case 3:
-                            return classroomDO.getFri3().isEmpty();
-                        case 4:
-                            return classroomDO.getFri4().isEmpty();
-                        case 5:
-                            return classroomDO.getFri5().isEmpty();
-                        case 6:
-                            return classroomDO.getFri6().isEmpty();
-                    }
-                case "Saturday":
-                    switch (num) {
-                        case 1:
-                            return classroomDO.getSat1().isEmpty();
-                        case 2:
-                            return classroomDO.getSat2().isEmpty();
-                        case 3:
-                            return classroomDO.getSat3().isEmpty();
-                        case 4:
-                            return classroomDO.getSat4().isEmpty();
-                        case 5:
-                            return classroomDO.getSat5().isEmpty();
-                        case 6:
-                            return classroomDO.getSat6().isEmpty();
-                    }
-                case "Sunday":
-                    switch (num) {
-                        case 1:
-                            return classroomDO.getSun1().isEmpty();
-                        case 2:
-                            return classroomDO.getSun2().isEmpty();
-                        case 3:
-                            return classroomDO.getSun3().isEmpty();
-                        case 4:
-                            return classroomDO.getSun4().isEmpty();
-                        case 5:
-                            return classroomDO.getSun5().isEmpty();
-                        case 6:
-                            return classroomDO.getSun6().isEmpty();
-                    }
-                    break;
-            }
-        }
-
-        return false;
-    }
+//
+//        return false;
+//    }
 
 }
