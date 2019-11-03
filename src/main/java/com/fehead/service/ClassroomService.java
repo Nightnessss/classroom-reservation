@@ -4,6 +4,7 @@ import com.fehead.controller.vo.ClassroomDisplayVO;
 import com.fehead.controller.vo.ClassroomListOrderVO;
 import com.fehead.controller.vo.ClassroomListVO;
 import com.fehead.dao.dataobject.ClassroomDO;
+import com.fehead.dao.dataobject.ClassroomInfoDO;
 import com.fehead.error.BusinessException;
 import com.fehead.service.model.ClassroomModel;
 import com.fehead.service.model.FreeClassroomModel;
@@ -36,5 +37,7 @@ import java.util.List;
  */
 public interface ClassroomService {
 
-    public ClassroomDisplayVO getFreeClassroom(Date startTime, Date endTime, Pageable pageable) throws ParseException, BusinessException;
+    public ClassroomDisplayVO getFreeClassroom(Date startTime, Date endTime, Pageable pageable) throws Exception;
+
+//    public boolean hasCourse(Integer num, ClassroomInfoDO classroomInfoDO, Date time) throws Exception;
 }
