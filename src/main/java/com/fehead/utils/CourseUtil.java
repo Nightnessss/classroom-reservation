@@ -48,6 +48,22 @@ public class CourseUtil {
     @Autowired
     private FreeClassSimplifyMapper freeClassSimplifyMapper;
 
+    private String[] SETS = {"setMon1", "setMon2", "setMon3", "setMon4", "setMon5", "setMon6",
+            "setTue1", "setTue2", "setTue3", "setTue4", "setTue5", "setTue6",
+            "setWed1", "setWed2", "setWed3", "setWed4", "setWed5", "setWed6",
+            "setThur1", "setThur2", "setThur3", "setThur4", "setThur5", "setThur6",
+            "setFri1", "setFri2", "setFri3", "setFri4", "setFri5", "setFri6",
+            "setSat1", "setSat2", "setSat3", "setSat4", "setSat5", "setSat6",
+            "setSun1", "setSun2", "setSun3", "setSun4", "setSun5", "setSun6"};
+    public List<String> SETMETHODS = Arrays.asList(SETS);
+    private String[] GETS = {"getMon1", "getMon2", "getMon3", "getMon4", "getMon5", "getMon6",
+            "getTue1", "getTue2", "getTue3", "getTue4", "getTue5", "getTue6",
+            "getWed1", "getWed2", "getWed3", "getWed4", "getWed5", "getWed6",
+            "getThur1", "getThur2", "getThur3", "getThur4", "getThur5", "getThur6",
+            "getFri1", "getFri2", "getFri3", "getFri4", "getFri5", "getFri6",
+            "getSat1", "getSat2", "getSat3", "getSat4", "getSat5", "getSat6",
+            "getSun1", "getSun2", "getSun3", "getSun4", "getSun5", "getSun6"};
+    public List<String> GETMETHODS = Arrays.asList(GETS);
     /**
      * 将提取出来的周次信息存入数据库
      * @return
@@ -148,34 +164,19 @@ public class CourseUtil {
      * @throws Exception
      */
     public void convertDatabase() throws Exception {
-        String[] sets = {"setMon1", "setMon2", "setMon3", "setMon4", "setMon5", "setMon6",
-                "setTue1", "setTue2", "setTue3", "setTue4", "setTue5", "setTue6",
-                "setWed1", "setWed2", "setWed3", "setWed4", "setWed5", "setWed6",
-                "setThur1", "setThur2", "setThur3", "setThur4", "setThur5", "setThur6",
-                "setFri1", "setFri2", "setFri3", "setFri4", "setFri5", "setFri6",
-                "setSat1", "setSat2", "setSat3", "setSat4", "setSat5", "setSat6",
-                "setSun1", "setSun2", "setSun3", "setSun4", "setSun5", "setSun6"};
-        List<String> setMethods = Arrays.asList(sets);
-        String[] gets = {"getMon1", "getMon2", "getMon3", "getMon4", "getMon5", "getMon6",
-                "getTue1", "getTue2", "getTue3", "getTue4", "getTue5", "getTue6",
-                "getWed1", "getWed2", "getWed3", "getWed4", "getWed5", "getWed6",
-                "getThur1", "getThur2", "getThur3", "getThur4", "getThur5", "getThur6",
-                "getFri1", "getFri2", "getFri3", "getFri4", "getFri5", "getFri6",
-                "getSat1", "getSat2", "getSat3", "getSat4", "getSat5", "getSat6",
-                "getSun1", "getSun2", "getSun3", "getSun4", "getSun5", "getSun6"};
-        List<String> getMethods = Arrays.asList(gets);
 
-        Class<?> classroomInfoDOClass = Class.forName("com.fehead.dao.dataobject.ClassroomInfoDO");
+
+//        Class<?> classroomInfoDOClass = Class.forName("com.fehead.dao.dataobject.ClassroomInfoDO");
 
         List<FreeClassSimplifyDO> freeClassSimplifyDOS = freeClassSimplifyMapper.selectList(null);
 
 
         for (FreeClassSimplifyDO o : freeClassSimplifyDOS) {
-            ClassroomInfoDO classroomInfoDO = (ClassroomInfoDO) classroomInfoDOClass.newInstance();
+            ClassroomInfoDO classroomInfoDO = new ClassroomInfoDO();
 
             BeanUtils.copyProperties(o, classroomInfoDO);
             // 执行get方法获取对象中的所有课时字段
-            List<String> test = getClass(classroomInfoDOClass, classroomInfoDO, getMethods);
+            List<String> test = getCourse(classroomInfoDO, GETMETHODS);
             List<String> values = new ArrayList<>();
 
             // 将课时字段的格式转变成二进制字符串的形式
@@ -184,7 +185,7 @@ public class CourseUtil {
             }
 
             // 执行set方法赋值
-            ClassroomInfoDO res = setClass(classroomInfoDOClass, classroomInfoDO, setMethods, values);
+            ClassroomInfoDO res = setCourse(classroomInfoDO, SETMETHODS, values);
             System.out.println(res);
 //            classroomInfoMapper.insert(res);
         }
@@ -229,18 +230,18 @@ public class CourseUtil {
 
     /**
      * 反射
-     * @param userClass
      * @param classroomInfoDO
      * @param methods
      * @param targets
      * @return
      * @throws Exception
      */
-    public ClassroomInfoDO setClass(Class<?> userClass, ClassroomInfoDO classroomInfoDO, List<String> methods, List<String> targets) throws Exception {
+    public ClassroomInfoDO setCourse(ClassroomInfoDO classroomInfoDO, List<String> methods, List<String> targets) throws Exception {
+
         if (methods.size() == targets.size()) {
             int i = 0;
             for (String method:methods) {
-                Method repay = userClass.getMethod(method,String.class);
+                Method repay = classroomInfoDO.getClass().getMethod(method,String.class);
                 repay.invoke(classroomInfoDO,targets.get(i++));
             }
         } else {
@@ -252,16 +253,18 @@ public class CourseUtil {
 
     /**
      * 反射
-     * @param userClass
      * @param classroomInfoDO
      * @param methods
      * @return
      * @throws Exception
      */
-    public List<String> getClass(Class<?> userClass, ClassroomInfoDO classroomInfoDO, List<String> methods) throws Exception {
+    public List<String> getCourse(ClassroomInfoDO classroomInfoDO, List<String> methods) throws Exception {
+
+//        classroomInfoDO = classroomInfoDO.getClass().newInstance();
+
         List<String> list = new ArrayList<>();
         for (String method:methods) {
-            Method repay = userClass.getMethod(method);
+            Method repay = classroomInfoDO.getClass().getMethod(method);
             list.add((String) repay.invoke(classroomInfoDO));
         }
         return list;

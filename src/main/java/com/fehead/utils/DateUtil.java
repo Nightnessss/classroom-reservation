@@ -66,7 +66,7 @@ public class DateUtil {
         }
         else    //不同年
         {
-            System.out.println("判断day2 - day1 : " + (day2-day1));
+//            System.out.println("判断day2 - day1 : " + (day2-day1));
             return day2-day1;
         }
     }

@@ -6,13 +6,16 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.fehead.controller.vo.ClassroomDisplayVO;
 import com.fehead.controller.vo.ClassroomListOrderVO;
 import com.fehead.controller.vo.ClassroomListVO;
+import com.fehead.dao.ClassroomInfoMapper;
 import com.fehead.dao.ClassroomMapper;
 import com.fehead.dao.dataobject.ClassroomDO;
+import com.fehead.dao.dataobject.ClassroomInfoDO;
 import com.fehead.error.BusinessException;
 import com.fehead.error.EmBusinessError;
 import com.fehead.properties.TotalProperties;
 import com.fehead.service.ClassroomService;
 import com.fehead.service.model.FreeClassroomModel;
+import com.fehead.utils.CourseUtil;
 import com.fehead.utils.DateUtil;
 import com.fehead.utils.TimeAndClassUtil;
 import org.apache.commons.lang3.StringUtils;
@@ -58,7 +61,23 @@ public class ClassroomServiceImpl implements ClassroomService {
     private DateUtil dateUtil;
 
     private Logger logger = LoggerFactory.getLogger(ClassroomServiceImpl.class);
-
+    final static Map<String, Integer> COURSR = new HashMap<>();
+    static {
+        COURSR.put("星期一", 0);
+        COURSR.put("星期二", 1);
+        COURSR.put("星期三", 2);
+        COURSR.put("星期四", 3);
+        COURSR.put("星期五", 4);
+        COURSR.put("星期六", 5);
+        COURSR.put("星期日", 6);
+        COURSR.put("Monday", 0);
+        COURSR.put("Tuesday", 1);
+        COURSR.put("Wednesday", 2);
+        COURSR.put("Thursday", 3);
+        COURSR.put("Friday", 4);
+        COURSR.put("Saturday", 5);
+        COURSR.put("Sunday", 6);
+    }
 //    final static List<String> WINDOWS = new ArrayList<>();
 //    static {
 //        WINDOWS.add("星期一");
@@ -87,10 +106,13 @@ public class ClassroomServiceImpl implements ClassroomService {
     private TimeAndClassUtil timeAndClassUtil;
 
     @Autowired
+    private CourseUtil courseUtil;
+
+    @Autowired
     private TotalProperties totalProperties;
 
     @Autowired
-    private ClassroomMapper classroomMapper;
+    private ClassroomInfoMapper classroomInfoMapper;
 
 //    /**
 //     * 获得空教室
@@ -186,7 +208,7 @@ public class ClassroomServiceImpl implements ClassroomService {
      * @throws BusinessException
      */
     @Override
-    public ClassroomDisplayVO getFreeClassroom(Date startTime, Date endTime, Pageable pageable) throws ParseException, BusinessException {
+    public ClassroomDisplayVO getFreeClassroom(Date startTime, Date endTime, Pageable pageable) throws Exception {
 
         if (pageable==null)  return null;
 
@@ -194,6 +216,7 @@ public class ClassroomServiceImpl implements ClassroomService {
         SimpleDateFormat week = new SimpleDateFormat("EEEE");
         String startWeek = week.format(startTime);
         String endWeek = week.format(endTime);
+        int weekly = date2Weekly(startTime);
         if (!startWeek.equals(endWeek)) {
             logger.info("EXCEPTION: " + EmBusinessError.PARAMETER_VALIDATION_ERROR.getErrorCode() + " "
                     + EmBusinessError.PARAMETER_VALIDATION_ERROR.getErrorMsg());
@@ -205,40 +228,42 @@ public class ClassroomServiceImpl implements ClassroomService {
         List<Integer> targetClasses = timeAndClassUtil.timeToClasses(startTime, endTime, totalProperties.getTimetableProperties().getTimetable());
         logger.info("FREE CLASSES: " + Arrays.asList(targetClasses).toString());
 
-        QueryWrapper<ClassroomDO> wrapper = new QueryWrapper<>();
+        QueryWrapper<ClassroomInfoDO> wrapper = new QueryWrapper<>();
 
         wrapper.orderByAsc("id");
         wrapper.eq("college", "校本部");
 
-        Page<ClassroomDO> page = new Page<>(pageable.getPageNumber(), pageable.getPageSize());
+        Page<ClassroomInfoDO> page = new Page<>(pageable.getPageNumber(), pageable.getPageSize());
 
-        IPage<ClassroomDO> classroomDOIPage;
+        IPage<ClassroomInfoDO> classroomInfoDOIPage;
 
-        classroomDOIPage = classroomMapper.selectPage(page, wrapper);
-        String osName = env.getProperty("os.name");
-        logger.info("OS NAME: " + osName);
+        classroomInfoDOIPage = classroomInfoMapper.selectPage(page, wrapper);
+//        String osName = env.getProperty("os.name");
+//        logger.info("OS NAME: " + osName);
 
         logger.info("PAGE_TOTAL: " + page.getTotal());
         logger.info("PAGE_SIZE: " + page.getSize());
         logger.info("PAGE_CURRENT: " + page.getCurrent());
         List<ClassroomListOrderVO> classroomListOrderVOS = new ArrayList<>();
         int listId = (int) ((page.getCurrent() - 1) * page.getSize());
-        for (ClassroomDO classroomDO : classroomDOIPage.getRecords()) {
+        for (ClassroomInfoDO classroomInfoDO : classroomInfoDOIPage.getRecords()) {
 //            System.out.println("-------------------------------------------");
 //            System.out.println("classroomDO: " + classroomDO.getId());
             ClassroomListVO classroomListVO = new ClassroomListVO();
-            BeanUtils.copyProperties(classroomDO, classroomListVO);
+            BeanUtils.copyProperties(classroomInfoDO, classroomListVO);
             ClassroomListOrderVO classroomListOrderVO = new ClassroomListOrderVO(classroomListVO, ++listId);
             boolean flag = true;
+
             // 当该教室该节次时间段有课时，标记flag=false
             for (Integer i : targetClasses) {
-                List<String> os = new ArrayList<>();
+//                List<String> os = new ArrayList<>();
 
 //                System.out.println(StringUtils.indexOfIgnoreCase("Windows 10 windows", "Windows"));
 //                System.out.println(StringUtils.indexOfIgnoreCase("Windows 10", "Unix"));
-                if (!ifNull(i, classroomDO, startWeek, osName)) {
-                    flag = false;
-                }
+//                if (!ifNull(i, classroomDO, startWeek, osName)) {
+//                    flag = false;
+//                }
+                flag = hasCourse(i, classroomInfoDO, startWeek, weekly);
 
             }
             if (flag) {
@@ -270,10 +295,12 @@ public class ClassroomServiceImpl implements ClassroomService {
     }
 
 
-    private boolean hasCourse(Integer num, ClassroomDO classroomDO, Date time, String osName) {
+    private boolean hasCourse(Integer num, ClassroomInfoDO classroomInfoDO, String week, int weekly) throws Exception {
 
+        List<String> list = courseUtil.getCourse(classroomInfoDO, courseUtil.GETMETHODS);
+        String course = list.get(COURSR.get(week) * 6 + num - 1);
 
-        return true;
+        return course.charAt(weekly)=='0';
     }
 
 
@@ -282,26 +309,27 @@ public class ClassroomServiceImpl implements ClassroomService {
      * @param date
      * @return
      */
-    private int Date2Weekly(Date date) throws ParseException, BusinessException {
+    private int date2Weekly(Date date) throws ParseException, BusinessException {
         SimpleDateFormat formatter = new SimpleDateFormat( "yyyy-MM-dd");
         Date start = formatter.parse("2019-09-02");
         Date end = formatter.parse("2020-01-12");
 
-        if (date.before(start) || end.after(end)) {
+        if (date.before(start) || date.after(end)) {
             logger.info("EXCEPTION: " + EmBusinessError.PARAMETER_VALIDATION_ERROR.getErrorCode() + " "
                     + "所选时间非本学期");
             throw new BusinessException(EmBusinessError.PARAMETER_VALIDATION_ERROR, "所选时间非本学期");
         }
         int total = dateUtil.differentDays(start, date);
-
+        logger.info("这周是第" + (total/7 + 1) + "周");
         return total/7 + 1;
     }
 
     /**
      * 判断给定条件下的教室是否为空
-     * @param num
-     * @param classroomDO
-     * @param week
+     * @param num  课的节次
+     * @param classroomDO  教室对象
+     * @param week  周次
+     * @param osName  操作系统
      * @return
      */
     private boolean ifNull(Integer num, ClassroomDO classroomDO, String week, String osName) {

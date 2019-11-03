@@ -46,7 +46,7 @@ public class ClassroomController extends BaseController {
     @GetMapping("/getFreeClassrooms")
     public CommonReturnType getFreeClassrooms(@RequestParam("start_time") String startTime,
                                               @RequestParam("end_time") String endTime,
-            @PageableDefault(size = 6,page = 1) Pageable pageable) throws ParseException, BusinessException {
+            @PageableDefault(size = 6,page = 1) Pageable pageable) throws Exception {
         logger.info("PARAM: startTime " + startTime);
         logger.info("PARAM: endTime " + endTime);
         if (StringUtils.isEmpty(startTime) || StringUtils.isEmpty(endTime)) {
